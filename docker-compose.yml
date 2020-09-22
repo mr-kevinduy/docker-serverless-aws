@@ -1,0 +1,21 @@
+version: "3"
+
+services:
+  app:
+    build: .
+    tty: true
+    restart: always
+    volumes:
+      - ./:/var/www/app
+    working_dir: /var/www/app
+    extra_hosts:
+      - "github.com:192.30.255.113"
+      - "assets-cdn.github.com:151.101.0.133"
+      - "avatars2.githubusercontent.com:151.101.64.133"
+      - "avatars1.githubusercontent.com:151.101.64.133"
+      - "avatars0.githubusercontent.com:151.101.64.133"
+      - "collector.githubapp.com:52.73.244.200"
+      - "api.github.com:192.30.255.117"
+      - "help.github.com:185.199.109.153"
+      - "codeload.github.com:192.30.255.120"
+      - "gist.github.com:192.30.255.118"
