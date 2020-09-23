@@ -25,7 +25,7 @@ provider:
   runtime: nodejs12.x
 
   # you can overwrite defaults here
-  #  stage: dev
+  stage: ${opt:stage, self:custom.defaultStage}
   region: ap-southeast-1
 
   # you can add statements to the Lambda function's IAM Role here
@@ -44,6 +44,12 @@ provider:
   environment:
     DYNAMODB_NAMESPACE: ${self:service}-${opt:stage, self:provider.stage}
 
+custom:
+  defaultStage: dev
+  profiles:
+    dev: devProfile
+    prod: prodProfile
+
 # you can add packaging information here
 package:
   # include:
@@ -54,21 +60,46 @@ package:
 
 functions:
   ## Users API
+  getUsers:
+    handler: src/User.get
+    events:
+      - http:
+          method: GET
+          path: /api/users/create
+          cors: true
+
   createUser:
     handler: src/User.create
     events:
       - http:
-        method: POST
-        path: /api/users/create
-        cors: true
+          method: POST
+          path: /api/users/create
+          cors: true
 
   getUser:
     handler: src/User.get
     events:
       - http:
-        method: GET
-        path: /api/users
-        cors: true
+          method: GET
+          path: /api/users/{id}
+          cors: true
+
+  ## Posts API
+  createPost:
+    handler: src/Post.create
+    events:
+      - http:
+          method: POST
+          path: /api/posts/create
+          cors: true
+
+  getPost:
+    handler: src/Post.get
+    events:
+      - http:
+          method: GET
+          path: /api/posts/{slug}
+          cors: true
 
 # you can add CloudFormation resource templates here
 resources:
@@ -80,16 +111,70 @@ resources:
         TableName: ${self:provider.environment.DYNAMODB_NAMESPACE}-users
         AttributeDefinitions:
           -
+            AttributeName: id
+            AttributeType: S
+          -
             AttributeName: username
             AttributeType: S
-
           -
             AttributeName: email
             AttributeType: S
         KeySchema:
           -
-            AttributeName: username
+            AttributeName: id
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          -
+            IndexName: email
+            KeySchema:
+              -
+                AttributeName: username
+                KeyType: HASH
+              -
+                AttributeName: email
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+    PostsDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.DYNAMODB_NAMESPACE}-posts
+        AttributeDefinitions:
+          -
+            AttributeName: slug
+            AttributeType: S
+          -
+            AttributeName: dummy
+            AttributeType: S
+          -
+            AttributeName: updatedAt
+            AttributeType: N
+        KeySchema:
+          -
+            AttributeName: slug
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          -
+            IndexName: updatedAt
+            KeySchema:
+              -
+                AttributeName: dummy
+                KeyType: HASH
+              -
+                AttributeName: updatedAt
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1

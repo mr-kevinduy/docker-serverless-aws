@@ -5,6 +5,7 @@ import Util from './Util';
 const usersTable = Util.getTableName('users');
 
 module.exports = {
+
   /** Create user */
   create: async event => {
     const body = JSON.parse(event.body);
@@ -70,35 +71,9 @@ module.exports = {
     });
   },
 
-  authenticateAndGetUser: event => {
-    try {
-      const token = getTokenFromEvent(event);
-      const decoded = jwt.verify(token, Util.tokenSecret);
-      const username = decoded.username;
-      const authenticatedUser = await getUserByUsername(username);
-
-      return authenticatedUser.Item;
-    } catch (err) {
-      return null;
-    }
-  },
-
-  getUserByUsername: username => Util.DocumentClient.get({
-    TableName: usersTable,
-    Key: {
-      username
-    },
-  }).promise(),
-
-  getUserByEmail: email => Util.DocumentClient.query({
-    TableName: usersTable,
-    IndexName: 'email',
-    KeyConditionExpression: 'email = :email',
-    ExpressionAttributeValues: {
-      ':email': email,
-    },
-    Select: 'ALL_ATTRIBUTES'
-  }).promise()
+  authenticateAndGetUser,
+  getUserByUsername,
+  getUserByEmail,
 };
 
 function mintToken(username) {
@@ -107,4 +82,38 @@ function mintToken(username) {
 
 function getTokenFromEvent(event) {
   return event.headers.Authorization.replace('Token ', '');
+}
+
+function getUserByUsername(username) {
+  return Util.DocumentClient.get({
+    TableName: usersTable,
+    Key: {
+      username
+    },
+  }).promise();
+}
+
+function getUserByEmail(email) {
+  return Util.DocumentClient.query({
+    TableName: usersTable,
+    IndexName: 'email',
+    KeyConditionExpression: 'email = :email',
+    ExpressionAttributeValues: {
+      ':email': email,
+    },
+    Select: 'ALL_ATTRIBUTES'
+  }).promise();
+}
+
+async function authenticateAndGetUser(event) {
+  try {
+    const token = getTokenFromEvent(event);
+    const decoded = jwt.verify(token, Util.tokenSecret);
+    const username = decoded.username;
+    const authenticatedUser = await getUserByUsername(username);
+
+    return authenticatedUser.Item;
+  } catch (err) {
+    return null;
+  }
 }
